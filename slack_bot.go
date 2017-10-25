@@ -2,24 +2,44 @@ package main
 
 import (
         "fmt"
+	"net/http"
 
         "github.com/turnage/graw/reddit"
+	"github.com/gorilla/mux"
 )
 
+var bot reddit.Bot
+
+func getFirstUrlFromUrl(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	harvest, err := bot.Listing(fmt.Sprintf("/r/%s", vars["subreddit"]), "")
+
+	if err != nil {
+                fmt.Println(fmt.Sprintf("Failed to fetch /r/%s: ", vars["subreddit"]), err)
+                return
+        }
+
+        for _, post := range harvest.Posts[:1] {
+		fmt.Fprintf(w, "%s", post.URL)
+        }
+}
+
 func main() {
-        bot, err := reddit.NewBotFromAgentFile("slack_bot.agent", 0)
+
+	// bot initialization
+	_bot, err := reddit.NewBotFromAgentFile("slack_bot.agent", 0)
         if err != nil {
                 fmt.Println("Failed to create bot handle: ", err)
                 return
-        }
+        } else {
+		bot = _bot
+	}
 
-        harvest, err := bot.Listing("/r/pic", "")
-        if err != nil {
-                fmt.Println("Failed to fetch /r/pic: ", err)
-                return
-        }
+	// mux router
+	r := mux.NewRouter()
 
-        for _, post := range harvest.Posts[:2] {
-		fmt.Printf("[%s] posted [%s] -> %s\n", post.Author, post.Title, post.URL)
-        }
+	r.HandleFunc("/{subreddit}", getFirstUrlFromUrl).Methods("GET")
+
+	http.ListenAndServe(":7777", r)
 }
