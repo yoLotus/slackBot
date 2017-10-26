@@ -52,7 +52,7 @@ func main() {
 	// mux router
 	r := mux.NewRouter()
 
-	r.HandleFunc("/{subreddit}", getFirstUrlFromUrl).Methods("GET")
+	r.HandleFunc("/{subreddit}", getFirstUrlFromUrl).Methods("GET", "POST")
 
 	http.ListenAndServe(":" + os.Getenv("PORT"), r)
 }
