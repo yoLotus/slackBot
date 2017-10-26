@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
         "fmt"
 	"net/http"
 	"os"
@@ -11,18 +12,26 @@ import (
 
 var bot reddit.Bot
 
-func getFirstUrlFromUrl(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+type message struct {
+	ResponseType string `json:"response_type"`
+	Text string `json:"text"`
+}
 
-	harvest, err := bot.Listing(fmt.Sprintf("/r/%s", vars["subreddit"]), "")
+func getFirstTopUrlFromSubreddit(w http.ResponseWriter, r *http.Request) {
+	harvest, err := bot.Listing(fmt.Sprintf("/r/%s", r.FormValue("text")), "")
 
 	if err != nil {
-                fmt.Println(fmt.Sprintf("Failed to fetch /r/%s: ", vars["subreddit"]), err)
+                fmt.Println(fmt.Sprintf("Failed to fetch /r/%s: ", r.FormValue("text")), err)
                 return
         }
 
-        for _, post := range harvest.Posts[:1] {
-		fmt.Fprintf(w, "%s", post.URL)
+	for _, post := range harvest.Posts[:1] {
+		response := message{
+			ResponseType: "in_channel",
+			Text: post.URL,
+		}
+		json.NewEncoder(w).Encode(response)
+		return
         }
 }
 
@@ -52,7 +61,7 @@ func main() {
 	// mux router
 	r := mux.NewRouter()
 
-	r.HandleFunc("/{subreddit}", getFirstUrlFromUrl).Methods("GET", "POST")
+	r.HandleFunc("/", getFirstTopUrlFromSubreddit).Methods("POST")
 
 	http.ListenAndServe(":" + os.Getenv("PORT"), r)
 }
