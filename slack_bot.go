@@ -12,12 +12,17 @@ import (
 
 var bot reddit.Bot
 
-type message struct {
-	ResponseType string `json:"response_type"`
-	Text string `json:"text"`
+type imageURL struct {
+	URL string `json:"image_url"`
 }
 
-func getFirstTopUrlFromSubreddit(w http.ResponseWriter, r *http.Request) {
+type message struct {
+	ResponseType string `json:"response_type"`
+	Text         string `json:"text"`
+	Attachments  []imageURL `json:"attachments"`
+}
+
+func getFirstPostsFromSubreddit(w http.ResponseWriter, r *http.Request) {
 	harvest, err := bot.Listing(fmt.Sprintf("/r/%s", r.FormValue("text")), "")
 
 	if err != nil {
@@ -26,13 +31,18 @@ func getFirstTopUrlFromSubreddit(w http.ResponseWriter, r *http.Request) {
         }
 
 	w.Header().Set("Content-Type", "application/json")
-	for _, post := range harvest.Posts[:1] {
-		response := message{
-			ResponseType: "in_channel",
-			Text: post.URL,
-		}
-		json.NewEncoder(w).Encode(response)
-        }
+	imagesURL := make([]imageURL, 5)
+	for i, post := range harvest.Posts[:5] {
+		imagesURL[i] = imageURL{URL: post.URL}
+	}
+
+	response := message{
+		ResponseType: "in_channel",
+		Text: fmt.Sprintf("All hot posts on %s subreddit", r.FormValue("text")),
+		Attachments: imagesURL,
+	}
+
+	json.NewEncoder(w).Encode(response)
 }
 
 func main() {
@@ -61,7 +71,7 @@ func main() {
 	// mux router
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", getFirstTopUrlFromSubreddit).Methods("POST")
+	r.HandleFunc("/", getFirstPostsFromSubreddit).Methods("POST")
 
 	http.ListenAndServe(":" + os.Getenv("PORT"), r)
 }
