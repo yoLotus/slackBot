@@ -31,7 +31,6 @@ func getFirstTopUrlFromSubreddit(w http.ResponseWriter, r *http.Request) {
 			Text: post.URL,
 		}
 		json.NewEncoder(w).Encode(response)
-		return
         }
 }
 
