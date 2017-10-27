@@ -25,6 +25,7 @@ func getFirstTopUrlFromSubreddit(w http.ResponseWriter, r *http.Request) {
                 return
         }
 
+	w.Header().Set("Content-Type", "application/json")
 	for _, post := range harvest.Posts[:1] {
 		response := message{
 			ResponseType: "in_channel",
